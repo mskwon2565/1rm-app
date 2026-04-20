@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="1RM 계산기">
+<meta name="theme-color" content="#0a0a0a">
+<title>1RM 계산기</title>
+
+<!-- PWA 매니페스트 인라인 처리 (단일 파일) -->
+<script>
+const manifestData = {
+  name: "전문가용 1RM 계산기",
+  short_name: "1RM 계산기",
+  description: "운동역학 기반 1RM 추정 및 훈련 처방",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#0a0a0a",
+  theme_color: "#0a0a0a",
+  orientation: "portrait",
+  icons: [
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230a0a0a' rx='32'/%3E%3Ctext x='96' y='130' font-size='110' text-anchor='middle' fill='white'%3E🏋️%3C/text%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230a0a0a' rx='80'/%3E%3Ctext x='256' y='360' font-size='300' text-anchor='middle' fill='white'%3E🏋️%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+const manifestURL = URL.createObjectURL(blob);
+document.write('<link rel="manifest" href="' + manifestURL + '">');
+</script>
+
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1c1c1c;
+    --surface3: #242424;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f0;
+    --text2: #888;
+    --text3: #555;
+    --accent: #e8ff00;
+    --accent-dim: rgba(232,255,0,0.12);
+    --red: #ff4d4d;
+    --amber: #ffaa00;
+    --green: #00d084;
+    --red-dim: rgba(255,77,77,0.12);
+    --amber-dim: rgba(255,170,0,0.12);
+    --green-dim: rgba(0,208,132,0.12);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+    --font: 'Helvetica Neue', 'Apple SD Gothic Neo', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; }
+
+  .app { display: flex; flex-direction: column; height: 100dvh; max-width: 430px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    padding: calc(var(--safe-top) + 14px) 20px 12px;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+    flex-shrink: 0;
+  }
+  .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .header-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab { flex: 1; padding: 11px 4px; text-align: center; font-size: 12px; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; letter-spacing: -0.2px; }
+  .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+  /* Scroll area */
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 16px calc(var(--safe-bot) + 80px); }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  /* Exercise selector */
+  .ex-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+  .ex-btn {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font);
+  }
+  .ex-btn .ex-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  .ex-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  /* Input row */
+  .input-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .input-wrap { background: var(--surface2); border: 0.5px solid var(--border); border-radius: 10px; padding: 10px 8px; }
+  .input-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; letter-spacing: 0.2px; }
+  input[type=number] {
+    background: none; border: none; outline: none; width: 100%;
+    font-size: 22px; font-weight: 700; color: var(--text); text-align: center;
+    font-family: var(--font); letter-spacing: -1px;
+    -moz-appearance: textfield;
+  }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  /* Result card */
+  .result-card {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .result-main { flex: 1; }
+  .result-label { font-size: 10px; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
+  .result-num { font-size: 48px; font-weight: 800; letter-spacing: -3px; line-height: 1; color: var(--accent); }
+  .result-unit { font-size: 14px; color: var(--text3); font-weight: 400; margin-top: 2px; }
+  .result-divider { width: 0.5px; background: var(--border); }
+  .result-side { display: flex; flex-direction: column; justify-content: center; gap: 8px; padding-left: 4px; min-width: 80px; }
+  .side-item { }
+  .side-label { font-size: 10px; color: var(--text3); }
+  .side-val { font-size: 16px; font-weight: 700; letter-spacing: -0.5px; }
+
+  /* Level badge */
+  .level-badge {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 0.3px;
+    margin-bottom: 10px;
+  }
+
+  /* Formula chips */
+  .formula-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 14px; }
+  .chip { background: var(--surface2); border: 0.5px solid var(--border); border-radius: 8px; padding: 8px 6px; text-align: center; }
+  .chip-label { font-size: 9px; color: var(--text3); margin-bottom: 3px; letter-spacing: 0.3px; }
+  .chip-val { font-size: 14px; font-weight: 600; }
+
+  /* Section */
+  .section { background: var(--surface2); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .section-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+
+  /* Zone bars */
+  .zone-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .zone-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .zone-name { font-size: 11px; color: var(--text2); width: 58px; flex-shrink: 0; }
+  .zone-bar-bg { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+  .zone-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+  .zone-kg { font-size: 12px; font-weight: 600; width: 88px; text-align: right; flex-shrink: 0; letter-spacing: -0.3px; }
+
+  /* Biomechanics */
+  .bio-item { font-size: 12px; color: var(--text2); line-height: 1.65; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .bio-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .bio-tag { display: inline-block; font-size: 9px; font-weight: 700; background: var(--accent-dim); color: var(--accent); padding: 1px 6px; border-radius: 4px; margin-bottom: 4px; letter-spacing: 0.3px; }
+
+  /* Buttons */
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .btn {
+    background: var(--surface3); border: 0.5px solid var(--border2);
+    border-radius: 10px; padding: 12px; font-size: 13px; font-weight: 500;
+    color: var(--text); cursor: pointer; text-align: center; font-family: var(--font);
+    transition: all 0.1s; letter-spacing: -0.2px;
+    -webkit-appearance: none; appearance: none;
+  }
+  .btn:active { opacity: 0.6; transform: scale(0.97); }
+  .btn.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+
+  /* Program tab */
+  .goal-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 14px; }
+  .goal-btn {
+    background: var(--surface2); border: 0.5px solid var(--border); border-radius: 10px;
+    padding: 10px 4px; text-align: center; cursor: pointer; transition: all 0.15s;
+    font-family: var(--font);
+  }
+  .goal-icon { font-size: 18px; display: block; margin-bottom: 3px; }
+  .goal-name { font-size: 11px; color: var(--text2); }
+  .goal-pct { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .goal-btn.active { border-color: var(--accent); }
+  .goal-btn.active .goal-name { color: var(--accent); }
+
+  .prog-info { background: var(--surface2); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; display: flex; gap: 16px; }
+  .prog-info-item { }
+  .prog-info-label { font-size: 10px; color: var(--text3); }
+  .prog-info-val { font-size: 13px; font-weight: 600; margin-top: 2px; }
+
+  .week-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .week-tab { flex: 1; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 8px; padding: 8px 4px; text-align: center; font-size: 12px; color: var(--text3); cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+  .week-tab.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+  .day-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .day-card { background: var(--surface2); border: 0.5px solid var(--border); border-radius: 10px; padding: 12px; }
+  .day-name { font-size: 10px; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.3px; }
+  .day-kg { font-size: 20px; font-weight: 800; letter-spacing: -1px; }
+  .day-sets { font-size: 11px; color: var(--text2); margin-top: 3px; }
+  .day-pct { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .rest-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+  .rest-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+  .rest-text { font-size: 11px; color: var(--text3); }
+
+  /* History */
+  .hist-item { background: var(--surface2); border: 0.5px solid var(--border); border-radius: 10px; padding: 13px 14px; margin-bottom: 9px; }
+  .hist-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
+  .hist-ex { font-size: 11px; color: var(--text3); }
+  .hist-rm { font-size: 20px; font-weight: 800; letter-spacing: -1px; color: var(--accent); }
+  .hist-bot { display: flex; justify-content: space-between; }
+  .hist-detail { font-size: 12px; color: var(--text2); }
+  .hist-date { font-size: 11px; color: var(--text3); }
+  .hist-empty { text-align: center; color: var(--text3); font-size: 13px; padding: 3rem 0; }
+  .hist-clear { text-align: center; margin-top: 12px; }
+
+  /* Install banner */
+  .install-banner {
+    position: fixed; bottom: calc(var(--safe-bot) + 72px); left: 50%; transform: translateX(-50%);
+    background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 12px;
+    padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+    max-width: calc(100% - 32px); box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    z-index: 100; animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity:0; } to { transform: translateX(-50%) translateY(0); opacity:1; } }
+  .install-text { flex: 1; font-size: 12px; color: var(--text2); line-height: 1.4; }
+  .install-text strong { color: var(--text); display: block; margin-bottom: 2px; }
+  .install-close { color: var(--text3); font-size: 18px; cursor: pointer; padding: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-title">🏋️ 1RM 계산기</div>
+    <div class="header-sub">운동역학 기반 최대 근력 추정 · 훈련 처방</div>
+  </div>
+
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('calc')">계산기</div>
+    <div class="tab" onclick="switchTab('program')">주간 프로그램</div>
+    <div class="tab" onclick="switchTab('history')">기록</div>
+  </div>
+
+  <!-- 계산기 탭 -->
+  <div id="tab-calc" class="scroll">
+    <div class="ex-grid">
+      <div class="ex-btn active" id="ex-스쿼트" onclick="setEx('스쿼트')">
+        <span class="ex-icon">🦵</span>스쿼트
+      </div>
+      <div class="ex-btn" id="ex-데드리프트" onclick="setEx('데드리프트')">
+        <span class="ex-icon">🏋️</span>데드리프트
+      </div>
+      <div class="ex-btn" id="ex-벤치프레스" onclick="setEx('벤치프레스')">
+        <span class="ex-icon">💪</span>벤치프레스
+      </div>
+    </div>
+
+    <div class="input-grid">
+      <div class="input-wrap">
+        <div class="input-label">중량 (kg)</div>
+        <input type="number" id="weight" value="100" min="10" max="400" step="2.5" oninput="calc()" inputmode="decimal">
+      </div>
+      <div class="input-wrap">
+        <div class="input-label">반복 (회)</div>
+        <input type="number" id="reps" value="5" min="1" max="15" step="1" oninput="calc()" inputmode="numeric">
+      </div>
+      <div class="input-wrap">
+        <div class="input-label">체중 (kg)</div>
+        <input type="number" id="bw" value="80" min="30" max="200" step="1" oninput="calc()" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-main">
+        <div class="result-label">추정 1RM</div>
+        <div class="result-num" id="rm-val">117</div>
+        <div class="result-unit">kg</div>
+      </div>
+      <div class="result-divider"></div>
+      <div class="result-side">
+        <div class="side-item">
+          <div class="side-label">체중 대비</div>
+          <div class="side-val" id="ratio-val">1.46×</div>
+        </div>
+        <div class="side-item">
+          <div class="side-label">강도 수준</div>
+          <div class="side-val" id="level-val" style="font-size:13px;">중급</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="chip">
+        <div class="chip-label">EPLEY</div>
+        <div class="chip-val" id="ep-v">117</div>
+      </div>
+      <div class="chip">
+        <div class="chip-label">BRZYCKI</div>
+        <div class="chip-val" id="br-v">116</div>
+      </div>
+      <div class="chip">
+        <div class="chip-label">O'CONNER</div>
+        <div class="chip-val" id="oc-v">117</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">목적별 처방 중량</div>
+      <div id="zones"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title" id="bio-title">스쿼트 · 생체역학</div>
+      <div id="bio-items"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="saveRec()">📁 기록 저장</button>
+      <button class="btn primary" onclick="doShare()">공유 ↗</button>
+    </div>
+  </div>
+
+  <!-- 주간 프로그램 탭 -->
+  <div id="tab-program" class="scroll" style="display:none;">
+    <div class="goal-grid">
+      <div class="goal-btn active" id="goal-strength" onclick="setGoal('strength')">
+        <span class="goal-icon">🔥</span>
+        <div class="goal-name">최대 근력</div>
+        <div class="goal-pct">85–100%</div>
+      </div>
+      <div class="goal-btn" id="goal-hyper" onclick="setGoal('hyper')">
+        <span class="goal-icon">💪</span>
+        <div class="goal-name">근비대</div>
+        <div class="goal-pct">70–84%</div>
+      </div>
+      <div class="goal-btn" id="goal-endurance" onclick="setGoal('endurance')">
+        <span class="goal-icon">🏃</span>
+        <div class="goal-name">근지구력</div>
+        <div class="goal-pct">50–69%</div>
+      </div>
+    </div>
+
+    <div class="prog-info" id="prog-info"></div>
+
+    <div class="week-tabs">
+      <div class="week-tab active" id="w1" onclick="setWeek(1)">1주차</div>
+      <div class="week-tab" id="w2" onclick="setWeek(2)">2주차</div>
+      <div class="week-tab" id="w3" onclick="setWeek(3)">3주차</div>
+      <div class="week-tab" id="w4" onclick="setWeek(4)">4주차</div>
+    </div>
+
+    <div class="day-grid" id="prog-grid"></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:10px;text-align:center;">계산기 탭의 1RM 기준으로 자동 산출 · 점진적 과부하 적용</div>
+  </div>
+
+  <!-- 기록 탭 -->
+  <div id="tab-history" class="scroll" style="display:none;">
+    <div id="hist-list"></div>
+  </div>
+</div>
+
+<!-- 설치 안내 배너 -->
+<div class="install-banner" id="install-banner" style="display:none;">
+  <div>📲</div>
+  <div class="install-text">
+    <strong>홈 화면에 추가하기</strong>
+    Safari → 공유 → 홈 화면에 추가
+  </div>
+  <div class="install-close" onclick="document.getElementById('install-banner').style.display='none'">×</div>
+</div>
+
+<script>
+// ─── 데이터 ───────────────────────────────────────────
+const BIOMECH = {
+  '스쿼트': [
+    { tag: '요추 부하', text: '고중량(>85% 1RM) 시 체간 전방 경사 증가 → 요추 압박력 상승. 상체 직립 유지.' },
+    { tag: '슬관절 정렬', text: '무릎-발끝 정렬: 슬개골이 발가락 2~3번 방향으로 추적되는지 확인.' },
+    { tag: 'COP 유지', text: '발뒤꿈치 COP 유지: 전족부 이동 시 슬관절 전단력 증가.' }
+  ],
+  '데드리프트': [
+    { tag: '요추 중립', text: '요추 중립 필수: 굴곡 상태 리프팅 시 L4-L5 추간판 부하 과도 상승.' },
+    { tag: '모멘트암', text: '바를 정강이에 밀착: 수평 거리 증가 시 요추 모멘트암 연장 → 신전근 부하 급증.' },
+    { tag: 'RFD', text: '피로 시 초기 RFD 저하 인식 → 협응력 무너지는 지점에서 훈련 중단.' }
+  ],
+  '벤치프레스': [
+    { tag: '견갑 세팅', text: '견갑골 후인하강 유지: 불안정 세팅 시 AC관절 충돌 위험.' },
+    { tag: '바 경로', text: '바 경로: 흉골 하부로 사선 하강. 수직 경로는 어깨 전방 이동 유발.' },
+    { tag: '전완 수직', text: '전완 수직 확인: 손목·팔꿈치 부하 최소화.' }
+  ]
+};
+
+const LEVELS = {
+  '스쿼트':     [{r:2.0,l:'엘리트'},{r:1.75,l:'상급'},{r:1.5,l:'중급'},{r:1.25,l:'초급'},{r:0,l:'입문'}],
+  '데드리프트': [{r:2.5,l:'엘리트'},{r:2.0,l:'상급'},{r:1.75,l:'중급'},{r:1.5,l:'초급'},{r:0,l:'입문'}],
+  '벤치프레스': [{r:1.5,l:'엘리트'},{r:1.25,l:'상급'},{r:1.0,l:'중급'},{r:0.75,l:'초급'},{r:0,l:'입문'}]
+};
+
+const LEVEL_COLOR = {엘리트:'#e8ff00',상급:'#00d084',중급:'#ffaa00',초급:'#888',입문:'#555'};
+
+const GOALS = {
+  strength:  { label:'최대 근력', icon:'🔥', pctMin:0.85, pctMax:1.00, sets:'3~5세트', reps:'1~5회', rest:'3~5분' },
+  hyper:     { label:'근비대',   icon:'💪', pctMin:0.70, pctMax:0.84, sets:'3~4세트', reps:'6~12회', rest:'60~90초' },
+  endurance: { label:'근지구력', icon:'🏃', pctMin:0.50, pctMax:0.69, sets:'2~3세트', reps:'15~20회', rest:'30~60초' }
+};
+
+const WEEK_PCT = {
+  strength:  [[0.75,0.80,0.85],[0.80,0.85,0.90],[0.85,0.90,0.95],[0.90,0.95,1.00]],
+  hyper:     [[0.65,0.70,0.75],[0.70,0.75,0.78],[0.72,0.76,0.80],[0.75,0.78,0.82]],
+  endurance: [[0.50,0.55,0.58],[0.52,0.57,0.60],[0.55,0.58,0.62],[0.57,0.60,0.65]]
+};
+
+const WEEK_SETS = {
+  strength:  [['5×3','5×3','3×3'],['4×3','4×3','3×2'],['4×2','4×2','2×2'],['3×2','3×1','1×1']],
+  hyper:     [['4×10','4×10','3×10'],['4×10','4×10','3×10'],['4×8','4×8','3×8'],['4×8','4×8','3×8']],
+  endurance: [['3×15','3×15','2×15'],['3×15','3×15','2×15'],['3×20','3×20','2×20'],['3×20','3×20','2×20']]
+};
+
+const DAYS = ['월요일','수요일','금요일'];
+
+// ─── 상태 ───────────────────────────────────────────
+let exercise = '스쿼트';
+let goal = 'strength';
+let week = 1;
+let history = [];
+try { history = JSON.parse(localStorage.getItem('1rm_app_v1') || '[]'); } catch(e) {}
+
+// ─── 계산 ───────────────────────────────────────────
+function calc() {
+  const w  = parseFloat(document.getElementById('weight').value) || 0;
+  const r  = parseInt(document.getElementById('reps').value)     || 1;
+  const bw = parseFloat(document.getElementById('bw').value)     || 80;
+
+  const ep = Math.round(w * (1 + r / 30));
+  const br = r === 1 ? Math.round(w) : Math.round(w * (36 / (37 - r)));
+  const oc = Math.round(w * (1 + r * 0.025));
+  const rm = Math.round((ep + br + oc) / 3);
+  const ratio = (rm / bw).toFixed(2);
+
+  document.getElementById('rm-val').textContent  = rm;
+  document.getElementById('ep-v').textContent    = ep;
+  document.getElementById('br-v').textContent    = br;
+  document.getElementById('oc-v').textContent    = oc;
+  document.getElementById('ratio-val').textContent = ratio + '×';
+
+  // 강도 수준
+  const lvArr = LEVELS[exercise];
+  let lv = lvArr[lvArr.length-1].l;
+  for (const item of lvArr) { if (parseFloat(ratio) >= item.r) { lv = item.l; break; } }
+  const lc = LEVEL_COLOR[lv] || '#888';
+  document.getElementById('level-val').textContent = lv;
+  document.getElementById('level-val').style.color = lc;
+
+  // 목적별 존
+  const zones = [
+    {name:'최대 근력', min:0.85, max:1.00, color:'#ff4d4d', pct:100},
+    {name:'근비대',    min:0.70, max:0.84, color:'#ffaa00', pct:84},
+    {name:'근지구력',  min:0.50, max:0.69, color:'#00d084', pct:69}
+  ];
+  document.getElementById('zones').innerHTML = zones.map(z => `
+    <div class="zone-row">
+      <div class="zone-dot" style="background:${z.color}"></div>
+      <div class="zone-name">${z.name}</div>
+      <div class="zone-bar-bg"><div class="zone-bar-fill" style="width:${z.pct}%;background:${z.color}"></div></div>
+      <div class="zone-kg">${Math.round(rm*z.min)}–${Math.round(rm*z.max)} kg</div>
+    </div>`).join('');
+
+  // 생체역학
+  document.getElementById('bio-title').textContent = exercise + ' · 생체역학';
+  document.getElementById('bio-items').innerHTML = (BIOMECH[exercise]||[]).map(b => `
+    <div class="bio-item">
+      <div class="bio-tag">${b.tag}</div>
+      <div>${b.text}</div>
+    </div>`).join('');
+
+  renderProg();
+}
+
+// ─── 운동 선택 ───────────────────────────────────────
+function setEx(ex) {
+  exercise = ex;
+  ['스쿼트','데드리프트','벤치프레스'].forEach(e => {
+    const el = document.getElementById('ex-' + e);
+    el.classList.toggle('active', e === ex);
+  });
+  calc();
+}
+
+// ─── 목표 선택 ───────────────────────────────────────
+function setGoal(g) {
+  goal = g;
+  ['strength','hyper','endurance'].forEach(k => {
+    document.getElementById('goal-' + k).classList.toggle('active', k === g);
+  });
+  renderProg();
+}
+
+// ─── 주차 선택 ───────────────────────────────────────
+function setWeek(w) {
+  week = w;
+  [1,2,3,4].forEach(n => {
+    document.getElementById('w'+n).classList.toggle('active', n === w);
+  });
+  renderProg();
+}
+
+// ─── 프로그램 렌더 ────────────────────────────────────
+function renderProg() {
+  const g  = GOALS[goal];
+  const rm = parseInt(document.getElementById('rm-val').textContent) || 100;
+
+  document.getElementById('prog-info').innerHTML = `
+    <div class="prog-info-item"><div class="prog-info-label">목적</div><div class="prog-info-val">${g.label}</div></div>
+    <div class="prog-info-item"><div class="prog-info-label">세트 구성</div><div class="prog-info-val">${g.sets} / ${g.reps}</div></div>
+    <div class="prog-info-item"><div class="prog-info-label">세트 간 휴식</div><div class="prog-info-val">${g.rest}</div></div>`;
+
+  const pcts = WEEK_PCT[goal][week-1];
+  const sets = WEEK_SETS[goal][week-1];
+
+  document.getElementById('prog-grid').innerHTML =
+    DAYS.map((d,i) => `
+      <div class="day-card">
+        <div class="day-name">${d}</div>
+        <div class="day-kg">${Math.round(rm*pcts[i])}<span style="font-size:12px;font-weight:400;color:var(--text3)"> kg</span></div>
+        <div class="day-sets">${sets[i]}세트×반복</div>
+        <div class="day-pct">${Math.round(pcts[i]*100)}% 1RM</div>
+      </div>`).join('') +
+    `<div class="rest-card">
+      <span class="rest-icon">🛌</span>
+      <div class="day-name" style="text-align:center;">휴식일</div>
+      <div class="rest-text">화·목·토·일<br>능동적 회복</div>
+    </div>`;
+}
+
+// ─── 기록 저장 ────────────────────────────────────────
+function saveRec() {
+  const w     = parseFloat(document.getElementById('weight').value) || 0;
+  const r     = parseInt(document.getElementById('reps').value)     || 1;
+  const rm    = parseInt(document.getElementById('rm-val').textContent);
+  const ratio = document.getElementById('ratio-val').textContent;
+  history.unshift({ exercise, weight:w, reps:r, rm, ratio, date: new Date().toLocaleDateString('ko-KR') });
+  if (history.length > 50) history.pop();
+  try { localStorage.setItem('1rm_app_v1', JSON.stringify(history)); } catch(e) {}
+  // 간단 피드백
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = '✓ 저장 완료';
+  setTimeout(() => btn.textContent = orig, 1500);
+}
+
+// ─── 공유 ────────────────────────────────────────────
+function doShare() {
+  const rm    = document.getElementById('rm-val').textContent;
+  const ratio = document.getElementById('ratio-val').textContent;
+  const w     = document.getElementById('weight').value;
+  const r     = document.getElementById('reps').value;
+  const g     = GOALS[goal];
+  const text  = `[1RM 측정 결과]\n운동: ${exercise}\n${w}kg × ${r}회 → 추정 1RM: ${rm}kg\n체중 대비: ${ratio}\n\n[${g.label} 처방]\n중량: ${Math.round(rm*g.pctMin)}–${Math.round(rm*g.pctMax)} kg\n${g.sets} / ${g.reps}회 / 휴식 ${g.rest}`;
+  if (navigator.share) {
+    navigator.share({ title: '1RM 계산 결과', text });
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.currentTarget;
+      const orig = btn.textContent;
+      btn.textContent = '✓ 복사됨';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+}
+
+// ─── 탭 전환 ─────────────────────────────────────────
+function switchTab(t) {
+  ['calc','program','history'].forEach(id => {
+    document.getElementById('tab-'+id).style.display = (id===t) ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['calc','program','history'][i] === t);
+  });
+  if (t === 'history') renderHist();
+  if (t === 'program') renderProg();
+}
+
+// ─── 기록 목록 ────────────────────────────────────────
+function renderHist() {
+  const el = document.getElementById('hist-list');
+  if (!history.length) {
+    el.innerHTML = '<div class="hist-empty">저장된 기록이 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = history.map(h => `
+    <div class="hist-item">
+      <div class="hist-top">
+        <span class="hist-ex">${h.exercise}</span>
+        <span class="hist-rm">${h.rm} kg</span>
+      </div>
+      <div class="hist-bot">
+        <span class="hist-detail">${h.weight}kg × ${h.reps}회 · ${h.ratio||''}</span>
+        <span class="hist-date">${h.date}</span>
+      </div>
+    </div>`).join('') +
+    `<div class="hist-clear"><button class="btn" style="width:100%;margin-top:4px;" onclick="clearHist()">기록 초기화</button></div>`;
+}
+
+function clearHist() {
+  if (!confirm('모든 기록을 삭제할까요?')) return;
+  history = [];
+  try { localStorage.removeItem('1rm_app_v1'); } catch(e) {}
+  renderHist();
+}
+
+// ─── iOS 홈 화면 설치 안내 ─────────────────────────────
+function checkInstallPrompt() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone;
+  const dismissed = localStorage.getItem('install_dismissed');
+  if (isIOS && !isStandalone && !dismissed) {
+    setTimeout(() => {
+      document.getElementById('install-banner').style.display = 'flex';
+    }, 3000);
+    document.getElementById('install-banner').querySelector('.install-close').addEventListener('click', () => {
+      localStorage.setItem('install_dismissed', '1');
+    });
+  }
+}
+
+// ─── 초기화 ───────────────────────────────────────────
+calc();
+checkInstallPrompt();
+
+// Service Worker 등록 (오프라인 지원)
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'v1';
+    self.addEventListener('install', e => {
+      self.skipWaiting();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(
+        caches.match(e.request).then(r => r || fetch(e.request).catch(() => new Response('')))
+      );
+    });
+  `;
+  const blob2 = new Blob([swCode], {type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob2)).catch(()=>{});
+}
+</script>
+</body>
+</html>
