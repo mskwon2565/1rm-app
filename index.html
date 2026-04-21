@@ -9,748 +9,564 @@
 <meta name="apple-mobile-web-app-title" content="1RM 계산기">
 <meta name="theme-color" content="#0a0a0a">
 <title>1RM 계산기</title>
-<script>
-const md = {name:"전문가용 1RM 계산기",short_name:"1RM 계산기",start_url:"./",display:"standalone",background_color:"#0a0a0a",theme_color:"#0a0a0a",orientation:"portrait",icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230a0a0a' rx='32'/%3E%3Ctext x='96' y='130' font-size='110' text-anchor='middle' fill='white'%3E🏋️%3C/text%3E%3C/svg%3E",sizes:"192x192",type:"image/svg+xml"}]};
-const b=new Blob([JSON.stringify(md)],{type:'application/json'});
-document.write('<link rel="manifest" href="'+URL.createObjectURL(b)+'">');
-</script>
 <style>
 :root{
   --bg:#0a0a0a;--s1:#141414;--s2:#1c1c1c;--s3:#242424;
-  --b1:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.13);
+  --b1:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.14);
   --t1:#f0f0f0;--t2:#888;--t3:#555;
   --ac:#e8ff00;--acd:rgba(232,255,0,0.1);
-  --red:#ff4d4d;--amb:#ffaa00;--grn:#00d084;--blu:#4d9fff;
-  --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
-  --fn:'Helvetica Neue','Apple SD Gothic Neo',sans-serif;
+  --red:#ff4d4d;--grn:#00d084;--blu:#4d9fff;--amb:#ffaa00;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;background:var(--bg);color:var(--t1);font-family:var(--fn);overflow:hidden;}
+html,body{height:100%;background:var(--bg);color:var(--t1);font-family:'Helvetica Neue','Apple SD Gothic Neo',sans-serif;overflow:hidden;}
 .app{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;}
-.hdr{padding:calc(var(--safe-t) + 12px) 16px 10px;background:var(--bg);border-bottom:0.5px solid var(--b1);flex-shrink:0;}
-.hdr-title{font-size:19px;font-weight:700;letter-spacing:-0.5px;}
+.hdr{padding:14px 16px 10px;background:var(--bg);border-bottom:0.5px solid var(--b1);flex-shrink:0;}
+.hdr-title{font-size:19px;font-weight:700;}
 .hdr-sub{font-size:11px;color:var(--t3);margin-top:2px;}
 .tabs{display:flex;background:var(--s1);border-bottom:0.5px solid var(--b1);flex-shrink:0;overflow-x:auto;}
 .tabs::-webkit-scrollbar{display:none;}
 .tab{flex:0 0 auto;padding:10px 14px;font-size:12px;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
 .tab.on{color:var(--ac);border-bottom-color:var(--ac);}
-.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px calc(var(--safe-b) + 70px);}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 80px;}
 .scroll::-webkit-scrollbar{display:none;}
-
-/* 공통 컴포넌트 */
+.page{display:none;}
+.page.on{display:block;}
 .card{background:var(--s2);border:0.5px solid var(--b1);border-radius:12px;padding:13px 14px;margin-bottom:11px;}
-.card-title{font-size:10px;color:var(--t3);letter-spacing:0.6px;text-transform:uppercase;margin-bottom:10px;}
-.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
-.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;}
+.card-title{font-size:10px;color:var(--t3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
 .metric{background:var(--s3);border-radius:8px;padding:10px 11px;}
-.metric-l{font-size:10px;color:var(--t3);margin-bottom:3px;}
-.metric-v{font-size:17px;font-weight:700;letter-spacing:-0.5px;}
-.metric-s{font-size:10px;color:var(--t2);margin-top:2px;}
-.btn{background:var(--s3);border:0.5px solid var(--b2);border-radius:9px;padding:11px;font-size:13px;font-weight:500;color:var(--t1);cursor:pointer;text-align:center;font-family:var(--fn);transition:opacity .1s;}
-.btn:active{opacity:.6;}
-.btn.pri{background:var(--ac);color:#000;border-color:var(--ac);font-weight:700;}
-.chip{background:var(--s3);border:0.5px solid var(--b1);border-radius:7px;padding:7px 6px;text-align:center;}
-.chip-l{font-size:9px;color:var(--t3);letter-spacing:0.3px;margin-bottom:3px;}
-.chip-v{font-size:13px;font-weight:600;}
-
-/* 운동 선택 */
+.ml{font-size:10px;color:var(--t3);margin-bottom:3px;}
+.mv{font-size:17px;font-weight:700;}
+.ms{font-size:10px;color:var(--t2);margin-top:2px;}
+.num-input{width:100%;background:var(--s2);border:0.5px solid var(--b1);border-radius:9px;padding:9px;font-size:20px;font-weight:700;color:var(--t1);text-align:center;outline:none;-moz-appearance:textfield;}
+.num-input::-webkit-outer-spin-button,.num-input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.lbl{font-size:10px;color:var(--t3);margin-bottom:4px;}
 .ex-btn{background:var(--s2);border:0.5px solid var(--b1);border-radius:10px;padding:9px 4px;text-align:center;cursor:pointer;transition:all .15s;}
-.ex-btn .ico{font-size:18px;display:block;margin-bottom:3px;}
-.ex-btn .nm{font-size:11px;color:var(--t2);}
+.ex-btn span.ico{font-size:18px;display:block;margin-bottom:3px;}
+.ex-btn span.nm{font-size:11px;color:var(--t2);}
 .ex-btn.on{background:var(--acd);border-color:var(--ac);}
-.ex-btn.on .nm{color:var(--ac);}
-
-/* 결과 */
+.ex-btn.on span.nm{color:var(--ac);}
 .res-card{background:var(--s2);border:0.5px solid var(--b1);border-radius:13px;padding:15px;margin-bottom:12px;display:flex;align-items:stretch;gap:12px;}
 .res-main{flex:1;}
-.res-l{font-size:10px;color:var(--t3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:3px;}
+.res-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
 .res-num{font-size:46px;font-weight:800;letter-spacing:-3px;line-height:1;color:var(--ac);}
 .res-unit{font-size:13px;color:var(--t3);margin-top:2px;}
-.res-div{width:0.5px;background:var(--b1);}
-.res-side{display:flex;flex-direction:column;justify-content:center;gap:8px;padding-left:4px;min-width:78px;}
-
-/* PR 배지 */
-.pr-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--acd);color:var(--ac);letter-spacing:0.3px;margin-left:8px;vertical-align:middle;}
-
-/* 존 바 */
+.res-div{width:.5px;background:var(--b1);}
+.res-side{display:flex;flex-direction:column;justify-content:center;gap:9px;padding-left:4px;min-width:76px;}
+.sl{font-size:10px;color:var(--t3);}
+.sv{font-size:14px;font-weight:700;margin-top:1px;}
+.pr-badge{display:none;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--acd);color:var(--ac);margin-left:6px;vertical-align:middle;}
+.chip{background:var(--s3);border:0.5px solid var(--b1);border-radius:7px;padding:7px 5px;text-align:center;}
+.chip-l{font-size:9px;color:var(--t3);letter-spacing:.3px;margin-bottom:3px;}
+.chip-v{font-size:13px;font-weight:600;}
 .zone-row{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
 .zone-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-.zone-nm{font-size:11px;color:var(--t2);width:56px;flex-shrink:0;}
+.zone-nm{font-size:11px;color:var(--t2);width:55px;flex-shrink:0;}
 .zone-bg{flex:1;height:4px;background:var(--s3);border-radius:2px;overflow:hidden;}
 .zone-fill{height:100%;border-radius:2px;}
-.zone-kg{font-size:12px;font-weight:600;width:86px;text-align:right;flex-shrink:0;letter-spacing:-0.3px;}
-
-/* 생체역학 */
-.bio-item{font-size:12px;color:var(--t2);line-height:1.6;padding:7px 0;border-bottom:0.5px solid var(--b1);}
+.zone-kg{font-size:12px;font-weight:600;width:88px;text-align:right;flex-shrink:0;}
+.bio-item{font-size:12px;color:var(--t2);line-height:1.6;padding:7px 0;border-bottom:.5px solid var(--b1);}
 .bio-item:last-child{border-bottom:none;padding-bottom:0;}
 .bio-tag{display:inline-block;font-size:9px;font-weight:700;background:var(--acd);color:var(--ac);padding:1px 6px;border-radius:4px;margin-bottom:3px;}
-
-/* 프로그램 탭 */
-.goal-btn{background:var(--s2);border:0.5px solid var(--b1);border-radius:10px;padding:9px 4px;text-align:center;cursor:pointer;transition:all .15s;font-family:var(--fn);}
-.goal-btn .ico{font-size:16px;display:block;margin-bottom:3px;}
-.goal-btn .nm{font-size:11px;color:var(--t2);}
-.goal-btn .pct{font-size:10px;color:var(--t3);margin-top:1px;}
+.btn{background:var(--s3);border:.5px solid var(--b2);border-radius:9px;padding:11px;font-size:13px;font-weight:500;color:var(--t1);cursor:pointer;text-align:center;transition:opacity .1s;width:100%;}
+.btn:active{opacity:.6;}
+.btn.pri{background:var(--ac);color:#000;border-color:var(--ac);font-weight:700;}
+.btn.danger{color:var(--red);border-color:rgba(255,77,77,.25);}
+.goal-btn{background:var(--s2);border:.5px solid var(--b1);border-radius:10px;padding:9px 4px;text-align:center;cursor:pointer;transition:all .15s;}
+.goal-btn span.ico{font-size:16px;display:block;margin-bottom:3px;}
+.goal-btn span.nm{font-size:11px;color:var(--t2);}
+.goal-btn span.pct{font-size:10px;color:var(--t3);display:block;margin-top:1px;}
 .goal-btn.on{border-color:var(--ac);}
-.goal-btn.on .nm{color:var(--ac);}
-.wtab{flex:1;background:var(--s2);border:0.5px solid var(--b1);border-radius:7px;padding:7px 4px;text-align:center;font-size:12px;color:var(--t3);cursor:pointer;font-family:var(--fn);transition:all .15s;}
+.goal-btn.on span.nm{color:var(--ac);}
+.wtab{flex:1;background:var(--s2);border:.5px solid var(--b1);border-radius:7px;padding:7px 4px;text-align:center;font-size:12px;color:var(--t3);cursor:pointer;transition:all .15s;}
 .wtab.on{background:var(--acd);border-color:var(--ac);color:var(--ac);font-weight:600;}
-.day-card{background:var(--s2);border:0.5px solid var(--b1);border-radius:9px;padding:11px;}
-.day-nm{font-size:10px;color:var(--t3);margin-bottom:7px;}
-.day-kg{font-size:19px;font-weight:800;letter-spacing:-1px;}
+.day-card{background:var(--s2);border:.5px solid var(--b1);border-radius:9px;padding:11px;}
+.day-nm{font-size:10px;color:var(--t3);margin-bottom:6px;}
+.day-kg{font-size:19px;font-weight:800;}
 .day-sets{font-size:11px;color:var(--t2);margin-top:2px;}
 .day-pct{font-size:10px;color:var(--t3);margin-top:1px;}
-
-/* 기록/달력 탭 */
+.stat-tab{flex:1;background:var(--s2);border:.5px solid var(--b1);border-radius:8px;padding:7px 4px;text-align:center;font-size:11px;color:var(--t3);cursor:pointer;transition:all .15s;}
+.stat-tab.on{border-color:var(--ac);color:var(--ac);}
 .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.month-nav button{background:var(--s2);border:0.5px solid var(--b1);border-radius:7px;padding:6px 12px;font-size:13px;color:var(--t1);cursor:pointer;font-family:var(--fn);}
+.month-nav button{background:var(--s2);border:.5px solid var(--b1);border-radius:7px;padding:6px 14px;font-size:14px;color:var(--t1);cursor:pointer;}
 .month-title{font-size:15px;font-weight:600;}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:14px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px;}
 .cal-dow{font-size:10px;color:var(--t3);text-align:center;padding:4px 0;}
-.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--t2);border-radius:6px;cursor:pointer;position:relative;transition:all .1s;}
-.cal-day.has-data{color:var(--t1);font-weight:600;}
-.cal-day.has-data::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--ac);}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--t2);border-radius:6px;cursor:pointer;position:relative;}
+.cal-day.has{color:var(--t1);font-weight:600;}
+.cal-day.has::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--ac);}
 .cal-day.today{background:var(--acd);color:var(--ac);}
-.cal-day.selected{background:var(--ac);color:#000;font-weight:700;}
-.cal-day.empty{pointer-events:none;}
-
-.hist-item{background:var(--s2);border:0.5px solid var(--b1);border-radius:9px;padding:12px 13px;margin-bottom:8px;}
+.cal-day.sel{background:var(--ac);color:#000;font-weight:700;}
+.cal-day.sel::after{display:none;}
+.cal-day.empty{pointer-events:none;color:transparent;}
+.hist-item{background:var(--s2);border:.5px solid var(--b1);border-radius:9px;padding:12px 13px;margin-bottom:8px;}
 .hist-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
 .hist-ex{font-size:11px;color:var(--t3);}
-.hist-rm{font-size:19px;font-weight:800;letter-spacing:-1px;color:var(--ac);}
-.hist-bot{display:flex;justify-content:space-between;align-items:center;}
+.hist-rm{font-size:19px;font-weight:800;color:var(--ac);}
+.hist-bot{display:flex;justify-content:space-between;}
 .hist-det{font-size:12px;color:var(--t2);}
 .hist-date{font-size:11px;color:var(--t3);}
-.pr-dot{width:6px;height:6px;border-radius:50%;background:var(--ac);display:inline-block;margin-left:5px;vertical-align:middle;}
-
-/* 프로필 탭 */
-.profile-field{margin-bottom:12px;}
-.profile-label{font-size:11px;color:var(--t3);margin-bottom:5px;}
-.profile-field input,
-.profile-field select{width:100%;background:var(--s3);border:0.5px solid var(--b1);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--t1);font-family:var(--fn);outline:none;}
-.profile-field select option{background:var(--s2);}
-.seg{display:flex;background:var(--s3);border-radius:8px;padding:3px;gap:3px;margin-bottom:12px;}
-.seg-btn{flex:1;padding:7px;font-size:12px;color:var(--t2);border-radius:6px;cursor:pointer;text-align:center;font-family:var(--fn);transition:all .15s;}
-.seg-btn.on{background:var(--s1);color:var(--t1);font-weight:600;}
-
-/* 통계 탭 */
-.stat-ex-tabs{display:flex;gap:6px;margin-bottom:12px;}
-.stat-ex-tab{flex:1;background:var(--s2);border:0.5px solid var(--b1);border-radius:8px;padding:7px 4px;text-align:center;font-size:11px;color:var(--t3);cursor:pointer;font-family:var(--fn);transition:all .15s;}
-.stat-ex-tab.on{border-color:var(--ac);color:var(--ac);}
-.pr-list-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid var(--b1);}
+.pr-list-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:.5px solid var(--b1);}
 .pr-list-item:last-child{border-bottom:none;}
+.seg{display:flex;background:var(--s3);border-radius:8px;padding:3px;gap:3px;}
+.seg-btn{flex:1;padding:7px;font-size:12px;color:var(--t2);border-radius:6px;cursor:pointer;text-align:center;transition:all .15s;}
+.seg-btn.on{background:var(--s1);color:var(--t1);font-weight:600;}
+.pf-lbl{font-size:11px;color:var(--t3);margin-bottom:5px;margin-top:12px;}
+.pf-input{width:100%;background:var(--s3);border:.5px solid var(--b1);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--t1);outline:none;}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="hdr">
     <div class="hdr-title">🏋️ 1RM 계산기</div>
-    <div class="hdr-sub" id="profile-greeting">운동역학 기반 최대 근력 추정 · 훈련 처방</div>
+    <div class="hdr-sub" id="greeting">운동역학 기반 최대 근력 추정 · 훈련 처방</div>
   </div>
-
   <div class="tabs">
-    <div class="tab on" onclick="switchTab('calc')">계산기</div>
-    <div class="tab" onclick="switchTab('program')">주간 프로그램</div>
-    <div class="tab" onclick="switchTab('stats')">통계</div>
-    <div class="tab" onclick="switchTab('history')">기록</div>
-    <div class="tab" onclick="switchTab('profile')">프로필</div>
+    <div class="tab on" onclick="go('calc')">계산기</div>
+    <div class="tab" onclick="go('prog')">주간 프로그램</div>
+    <div class="tab" onclick="go('stats')">통계</div>
+    <div class="tab" onclick="go('hist')">기록</div>
+    <div class="tab" onclick="go('prof')">프로필</div>
   </div>
 
-  <!-- 계산기 탭 -->
-  <div id="tab-calc" class="scroll">
+  <!-- 계산기 -->
+  <div id="page-calc" class="scroll page on">
     <div class="g3" style="margin-bottom:12px;">
-      <div class="ex-btn on" id="ex-스쿼트" onclick="setEx('스쿼트')"><span class="ico">🦵</span><span class="nm">스쿼트</span></div>
-      <div class="ex-btn" id="ex-데드리프트" onclick="setEx('데드리프트')"><span class="ico">🏋️</span><span class="nm">데드리프트</span></div>
-      <div class="ex-btn" id="ex-벤치프레스" onclick="setEx('벤치프레스')"><span class="ico">💪</span><span class="nm">벤치프레스</span></div>
+      <div class="ex-btn on" id="ex0" onclick="setEx(0)"><span class="ico">🦵</span><span class="nm">스쿼트</span></div>
+      <div class="ex-btn" id="ex1" onclick="setEx(1)"><span class="ico">🏋️</span><span class="nm">데드리프트</span></div>
+      <div class="ex-btn" id="ex2" onclick="setEx(2)"><span class="ico">💪</span><span class="nm">벤치프레스</span></div>
     </div>
-
     <div class="g3" style="margin-bottom:12px;">
-      <div><div style="font-size:10px;color:var(--t3);margin-bottom:4px;">중량 (kg)</div>
-        <input type="number" id="weight" value="100" min="10" max="400" step="2.5" oninput="calc()" inputmode="decimal" style="width:100%;background:var(--s2);border:0.5px solid var(--b1);border-radius:9px;padding:9px;font-size:20px;font-weight:700;color:var(--t1);text-align:center;font-family:var(--fn);outline:none;-moz-appearance:textfield;">
-      </div>
-      <div><div style="font-size:10px;color:var(--t3);margin-bottom:4px;">반복 (회)</div>
-        <input type="number" id="reps" value="5" min="1" max="15" step="1" oninput="calc()" inputmode="numeric" style="width:100%;background:var(--s2);border:0.5px solid var(--b1);border-radius:9px;padding:9px;font-size:20px;font-weight:700;color:var(--t1);text-align:center;font-family:var(--fn);outline:none;-moz-appearance:textfield;">
-      </div>
-      <div><div style="font-size:10px;color:var(--t3);margin-bottom:4px;">체중 (kg)</div>
-        <input type="number" id="bw" value="75" min="30" max="200" step="0.5" oninput="calc()" inputmode="decimal" style="width:100%;background:var(--s2);border:0.5px solid var(--b1);border-radius:9px;padding:9px;font-size:20px;font-weight:700;color:var(--t1);text-align:center;font-family:var(--fn);outline:none;-moz-appearance:textfield;">
-      </div>
+      <div><div class="lbl">중량 (kg)</div><input class="num-input" id="iw" type="number" value="100" min="10" max="400" step="2.5" inputmode="decimal" oninput="calc()"></div>
+      <div><div class="lbl">반복 (회)</div><input class="num-input" id="ir" type="number" value="5" min="1" max="15" step="1" inputmode="numeric" oninput="calc()"></div>
+      <div><div class="lbl">체중 (kg)</div><input class="num-input" id="ib" type="number" value="75" min="30" max="200" step="0.5" inputmode="decimal" oninput="calc()"></div>
     </div>
-
     <div class="res-card">
       <div class="res-main">
-        <div class="res-l">추정 1RM <span id="pr-badge" style="display:none;" class="pr-badge">🏆 PR</span></div>
-        <div class="res-num" id="rm-val">117</div>
+        <div class="res-lbl">추정 1RM <span id="pr-badge" class="pr-badge">🏆 PR</span></div>
+        <div class="res-num" id="out-rm">117</div>
         <div class="res-unit">kg</div>
       </div>
       <div class="res-div"></div>
       <div class="res-side">
-        <div><div style="font-size:10px;color:var(--t3);">체중 대비</div><div style="font-size:16px;font-weight:700;" id="ratio-val">1.46×</div></div>
-        <div><div style="font-size:10px;color:var(--t3);">강도 수준</div><div style="font-size:13px;font-weight:700;" id="level-val">중급</div></div>
-        <div><div style="font-size:10px;color:var(--t3);">이전 대비</div><div style="font-size:13px;font-weight:700;" id="diff-val">—</div></div>
+        <div><div class="sl">체중 대비</div><div class="sv" id="out-ratio">1.46×</div></div>
+        <div><div class="sl">강도 수준</div><div class="sv" id="out-level">중급</div></div>
+        <div><div class="sl">이전 대비</div><div class="sv" id="out-diff">—</div></div>
       </div>
     </div>
-
     <div class="g3" style="margin-bottom:12px;">
-      <div class="chip"><div class="chip-l">EPLEY</div><div class="chip-v" id="ep-v">117</div></div>
-      <div class="chip"><div class="chip-l">BRZYCKI</div><div class="chip-v" id="br-v">116</div></div>
-      <div class="chip"><div class="chip-l">O'CONNER</div><div class="chip-v" id="oc-v">117</div></div>
+      <div class="chip"><div class="chip-l">EPLEY</div><div class="chip-v" id="out-ep">117</div></div>
+      <div class="chip"><div class="chip-l">BRZYCKI</div><div class="chip-v" id="out-br">116</div></div>
+      <div class="chip"><div class="chip-l">O'CONNER</div><div class="chip-v" id="out-oc">117</div></div>
     </div>
-
-    <div class="card">
-      <div class="card-title">목적별 처방 중량</div>
-      <div id="zones"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title" id="bio-title">스쿼트 · 생체역학</div>
-      <div id="bio-items"></div>
-    </div>
-
-    <div class="g2" style="margin-top:12px;">
-      <button class="btn" onclick="saveRec()">📁 기록 저장</button>
+    <div class="card"><div class="card-title">목적별 처방 중량</div><div id="out-zones"></div></div>
+    <div class="card"><div class="card-title" id="out-bio-title">스쿼트 · 생체역학</div><div id="out-bio"></div></div>
+    <div class="g2" style="margin-top:4px;gap:8px;">
+      <button class="btn" id="save-btn" onclick="saveRec()">📁 기록 저장</button>
       <button class="btn pri" onclick="doShare()">공유 ↗</button>
     </div>
   </div>
 
-  <!-- 주간 프로그램 탭 -->
-  <div id="tab-program" class="scroll" style="display:none;">
+  <!-- 주간 프로그램 -->
+  <div id="page-prog" class="scroll page">
     <div class="g3" style="margin-bottom:12px;">
-      <div class="goal-btn on" id="goal-strength" onclick="setGoal('strength')"><span class="ico">🔥</span><div class="nm">최대 근력</div><div class="pct">85–100%</div></div>
-      <div class="goal-btn" id="goal-hyper" onclick="setGoal('hyper')"><span class="ico">💪</span><div class="nm">근비대</div><div class="pct">70–84%</div></div>
-      <div class="goal-btn" id="goal-endurance" onclick="setGoal('endurance')"><span class="ico">🏃</span><div class="nm">근지구력</div><div class="pct">50–69%</div></div>
+      <div class="goal-btn on" id="g0" onclick="setGoal(0)"><span class="ico">🔥</span><span class="nm">최대 근력</span><span class="pct">85–100%</span></div>
+      <div class="goal-btn" id="g1" onclick="setGoal(1)"><span class="ico">💪</span><span class="nm">근비대</span><span class="pct">70–84%</span></div>
+      <div class="goal-btn" id="g2" onclick="setGoal(2)"><span class="ico">🏃</span><span class="nm">근지구력</span><span class="pct">50–69%</span></div>
     </div>
-    <div class="card" id="prog-info" style="margin-bottom:12px;"></div>
+    <div class="card" id="prog-info"></div>
     <div style="display:flex;gap:6px;margin-bottom:10px;">
-      <div class="wtab on" id="w1" onclick="setWeek(1)">1주차</div>
-      <div class="wtab" id="w2" onclick="setWeek(2)">2주차</div>
-      <div class="wtab" id="w3" onclick="setWeek(3)">3주차</div>
-      <div class="wtab" id="w4" onclick="setWeek(4)">4주차</div>
+      <div class="wtab on" id="wt0" onclick="setWeek(0)">1주차</div>
+      <div class="wtab" id="wt1" onclick="setWeek(1)">2주차</div>
+      <div class="wtab" id="wt2" onclick="setWeek(2)">3주차</div>
+      <div class="wtab" id="wt3" onclick="setWeek(3)">4주차</div>
     </div>
-    <div class="g2" id="prog-grid"></div>
-    <div style="font-size:11px;color:var(--t3);margin-top:10px;text-align:center;">계산기 탭 1RM 기준 · 점진적 과부하 적용</div>
+    <div class="g2" id="prog-days"></div>
+    <div style="font-size:11px;color:var(--t3);margin-top:10px;text-align:center;">계산기 탭 1RM 기준 · 점진적 과부하</div>
   </div>
 
-  <!-- 통계 탭 -->
-  <div id="tab-stats" class="scroll" style="display:none;">
-    <div class="stat-ex-tabs">
-      <div class="stat-ex-tab on" id="st-스쿼트" onclick="setStatEx('스쿼트')">스쿼트</div>
-      <div class="stat-ex-tab" id="st-데드리프트" onclick="setStatEx('데드리프트')">데드리프트</div>
-      <div class="stat-ex-tab" id="st-벤치프레스" onclick="setStatEx('벤치프레스')">벤치프레스</div>
+  <!-- 통계 -->
+  <div id="page-stats" class="scroll page">
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <div class="stat-tab on" id="st0" onclick="setStatEx(0)">스쿼트</div>
+      <div class="stat-tab" id="st1" onclick="setStatEx(1)">데드리프트</div>
+      <div class="stat-tab" id="st2" onclick="setStatEx(2)">벤치프레스</div>
     </div>
-
     <div class="g2" style="margin-bottom:12px;">
-      <div class="metric"><div class="metric-l">최고 1RM (PR)</div><div class="metric-v" id="st-pr">—</div><div class="metric-s" id="st-pr-date">기록 없음</div></div>
-      <div class="metric"><div class="metric-l">최근 1RM</div><div class="metric-v" id="st-last">—</div><div class="metric-s" id="st-last-date">기록 없음</div></div>
-      <div class="metric"><div class="metric-l">총 훈련 횟수</div><div class="metric-v" id="st-cnt">0</div><div class="metric-s">회</div></div>
-      <div class="metric"><div class="metric-l">체중 대비 최고</div><div class="metric-v" id="st-ratio">—</div><div class="metric-s">× 체중</div></div>
+      <div class="metric"><div class="ml">최고 1RM (PR)</div><div class="mv" id="st-pr">—</div><div class="ms" id="st-pr-d">기록 없음</div></div>
+      <div class="metric"><div class="ml">최근 1RM</div><div class="mv" id="st-last">—</div><div class="ms" id="st-last-d">기록 없음</div></div>
+      <div class="metric"><div class="ml">총 훈련 횟수</div><div class="mv" id="st-cnt">0</div><div class="ms">회</div></div>
+      <div class="metric"><div class="ml">체중 대비 최고</div><div class="mv" id="st-ratio">—</div><div class="ms">× 체중</div></div>
     </div>
-
     <div class="card">
-      <div class="card-title">1RM 추이 그래프</div>
-      <div style="position:relative;width:100%;height:180px;">
-        <canvas id="rm-chart" role="img" aria-label="종목별 1RM 추이 꺾은선 그래프"></canvas>
-      </div>
+      <div class="card-title">1RM 추이</div>
+      <div style="position:relative;width:100%;height:180px;"><canvas id="c-rm"></canvas></div>
     </div>
-
     <div class="card">
-      <div class="card-title">체중 추이 그래프</div>
-      <div style="position:relative;width:100%;height:160px;">
-        <canvas id="bw-chart" role="img" aria-label="체중 추이 그래프"></canvas>
-      </div>
+      <div class="card-title">체중 추이</div>
+      <div style="position:relative;width:100%;height:160px;"><canvas id="c-bw"></canvas></div>
     </div>
-
     <div class="card">
-      <div class="card-title">개인 PR 기록</div>
+      <div class="card-title">3종목 PR 비교</div>
       <div id="pr-list"></div>
     </div>
   </div>
 
-  <!-- 기록 탭 -->
-  <div id="tab-history" class="scroll" style="display:none;">
+  <!-- 기록 달력 -->
+  <div id="page-hist" class="scroll page">
     <div class="month-nav">
-      <button onclick="changeMonth(-1)">‹</button>
-      <div class="month-title" id="cal-month-title"></div>
-      <button onclick="changeMonth(1)">›</button>
+      <button onclick="moveMon(-1)">‹</button>
+      <div class="month-title" id="mon-title"></div>
+      <button onclick="moveMon(1)">›</button>
     </div>
-    <div class="cal-grid" id="cal-grid"></div>
-    <div style="font-size:11px;color:var(--t3);margin-bottom:10px;" id="cal-selected-label"></div>
-    <div id="hist-list"></div>
+    <div class="cal-grid" id="cal"></div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:8px;" id="hist-label">최근 기록</div>
+    <div id="hist-items"></div>
   </div>
 
-  <!-- 프로필 탭 -->
-  <div id="tab-profile" class="scroll" style="display:none;">
+  <!-- 프로필 -->
+  <div id="page-prof" class="scroll page">
     <div class="card">
       <div class="card-title">기본 정보</div>
-      <div class="profile-field"><div class="profile-label">이름</div><input type="text" id="p-name" placeholder="이름 입력"></div>
-      <div class="profile-field"><div class="profile-label">성별</div>
-        <div class="seg">
-          <div class="seg-btn on" id="p-male" onclick="setSex('남')">남성</div>
-          <div class="seg-btn" id="p-female" onclick="setSex('여')">여성</div>
-        </div>
+      <div class="pf-lbl">이름</div>
+      <input class="pf-input" id="pf-name" type="text" placeholder="이름 입력">
+      <div class="pf-lbl">성별</div>
+      <div class="seg">
+        <div class="seg-btn on" id="sex-m" onclick="setSex('남')">남성</div>
+        <div class="seg-btn" id="sex-f" onclick="setSex('여')">여성</div>
       </div>
-      <div class="g2">
-        <div class="profile-field"><div class="profile-label">나이</div><input type="number" id="p-age" placeholder="예: 30" min="10" max="90"></div>
-        <div class="profile-field"><div class="profile-label">키 (cm)</div><input type="number" id="p-height" placeholder="예: 175" min="100" max="220"></div>
+      <div class="g2" style="margin-top:0;">
+        <div><div class="pf-lbl">나이</div><input class="pf-input" id="pf-age" type="number" placeholder="30" inputmode="numeric"></div>
+        <div><div class="pf-lbl">키 (cm)</div><input class="pf-input" id="pf-ht" type="number" placeholder="175" inputmode="numeric"></div>
       </div>
-      <button class="btn" style="width:100%;margin-top:4px;" onclick="saveProfile()">저장</button>
+      <button class="btn" style="margin-top:12px;" onclick="saveProf()">저장</button>
     </div>
-
     <div class="card">
-      <div class="card-title">체중 기록</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end;">
-        <div style="flex:1;"><div class="profile-label">오늘 체중 (kg)</div>
-          <input type="number" id="bw-input" placeholder="예: 75.5" step="0.1" min="30" max="200" style="width:100%;background:var(--s3);border:0.5px solid var(--b1);border-radius:8px;padding:10px;font-size:16px;color:var(--t1);font-family:var(--fn);outline:none;">
+      <div class="card-title">오늘 체중 기록</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;">
+        <div style="flex:1;"><div class="pf-lbl" style="margin-top:0;">체중 (kg)</div>
+          <input class="pf-input" id="pf-bw" type="number" placeholder="75.5" step="0.1" inputmode="decimal">
         </div>
-        <button class="btn" style="padding:10px 16px;white-space:nowrap;" onclick="saveBW()">기록</button>
+        <button class="btn" style="width:auto;padding:10px 16px;flex-shrink:0;" onclick="saveBW()">기록</button>
       </div>
-      <div style="position:relative;width:100%;height:140px;">
-        <canvas id="bw-mini-chart" role="img" aria-label="최근 체중 추이"></canvas>
-      </div>
+      <div style="position:relative;width:100%;height:130px;"><canvas id="c-bwm"></canvas></div>
     </div>
-
     <div class="card">
       <div class="card-title">데이터 관리</div>
-      <button class="btn" style="width:100%;margin-bottom:8px;" onclick="exportCSV()">CSV 내보내기 ↗</button>
-      <button class="btn" style="width:100%;color:var(--red);border-color:rgba(255,77,77,0.3);" onclick="clearAll()">모든 기록 초기화</button>
+      <button class="btn" style="margin-bottom:8px;" onclick="exportCSV()">CSV 내보내기 ↗</button>
+      <button class="btn danger" onclick="clearAll()">모든 기록 초기화</button>
     </div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-// ── 데이터 상수 ────────────────────────────────────
-const BIOMECH = {
-  '스쿼트':[{tag:'요추 부하',txt:'고중량(>85% 1RM) 시 체간 전방 경사 증가 → 요추 압박력 상승. 상체 직립 유지.'},{tag:'슬관절 정렬',txt:'무릎-발끝 정렬: 슬개골이 발가락 2~3번 방향으로 추적되는지 확인.'},{tag:'COP 유지',txt:'발뒤꿈치 COP 유지: 전족부 이동 시 슬관절 전단력 증가.'}],
-  '데드리프트':[{tag:'요추 중립',txt:'요추 중립 필수: 굴곡 상태 리프팅 시 L4-L5 추간판 부하 과도 상승.'},{tag:'모멘트암',txt:'바를 정강이에 밀착: 수평 거리 증가 시 요추 모멘트암 연장 → 신전근 부하 급증.'},{tag:'RFD',txt:'피로 시 초기 RFD 저하 인식 → 협응력 무너지는 지점에서 훈련 중단.'}],
-  '벤치프레스':[{tag:'견갑 세팅',txt:'견갑골 후인하강 유지: 불안정 세팅 시 AC관절 충돌 위험.'},{tag:'바 경로',txt:'바 경로: 흉골 하부로 사선 하강. 수직 경로는 어깨 전방 이동 유발.'},{tag:'전완 수직',txt:'전완 수직 확인: 손목·팔꿈치 부하 최소화.'}]
-};
+var EX=['스쿼트','데드리프트','벤치프레스'];
+var BIOMECH=[
+  [{tag:'요추 부하',txt:'고중량(>85% 1RM) 시 체간 전방 경사 증가 → 요추 압박력 상승. 상체 직립 유지.'},{tag:'슬관절 정렬',txt:'무릎-발끝 정렬: 슬개골이 발가락 2~3번 방향으로 추적되는지 확인.'},{tag:'COP 유지',txt:'발뒤꿈치 COP 유지: 전족부 이동 시 슬관절 전단력 증가.'}],
+  [{tag:'요추 중립',txt:'요추 중립 필수: 굴곡 상태 리프팅 시 L4-L5 추간판 부하 과도 상승.'},{tag:'모멘트암',txt:'바를 정강이에 밀착: 수평 거리 증가 시 요추 모멘트암 연장.'},{tag:'RFD',txt:'피로 시 초기 RFD 저하 인식 → 협응력 무너지는 지점에서 훈련 중단.'}],
+  [{tag:'견갑 세팅',txt:'견갑골 후인하강 유지: 불안정 세팅 시 AC관절 충돌 위험.'},{tag:'바 경로',txt:'바 경로: 흉골 하부로 사선 하강. 수직 경로는 어깨 전방 이동 유발.'},{tag:'전완 수직',txt:'전완 수직 확인: 손목·팔꿈치 부하 최소화.'}]
+];
+var LEVELS=[
+  [{r:2.0,l:'엘리트'},{r:1.75,l:'상급'},{r:1.5,l:'중급'},{r:1.25,l:'초급'},{r:0,l:'입문'}],
+  [{r:2.5,l:'엘리트'},{r:2.0,l:'상급'},{r:1.75,l:'중급'},{r:1.5,l:'초급'},{r:0,l:'입문'}],
+  [{r:1.5,l:'엘리트'},{r:1.25,l:'상급'},{r:1.0,l:'중급'},{r:0.75,l:'초급'},{r:0,l:'입문'}]
+];
+var LVC={엘리트:'#e8ff00',상급:'#00d084',중급:'#ffaa00',초급:'#888',입문:'#555'};
+var GOALS=[
+  {label:'최대 근력',pmin:.85,pmax:1.00,sets:'3~5세트',reps:'1~5회',rest:'3~5분'},
+  {label:'근비대',pmin:.70,pmax:.84,sets:'3~4세트',reps:'6~12회',rest:'60~90초'},
+  {label:'근지구력',pmin:.50,pmax:.69,sets:'2~3세트',reps:'15~20회',rest:'30~60초'}
+];
+var WPCT=[
+  [[.75,.80,.85],[.80,.85,.90],[.85,.90,.95],[.90,.95,1.00]],
+  [[.65,.70,.75],[.70,.75,.78],[.72,.76,.80],[.75,.78,.82]],
+  [[.50,.55,.58],[.52,.57,.60],[.55,.58,.62],[.57,.60,.65]]
+];
+var WSETS=[
+  [['5×3','5×3','3×3'],['4×3','4×3','3×2'],['4×2','4×2','2×2'],['3×2','3×1','1×1']],
+  [['4×10','4×10','3×10'],['4×10','4×10','3×10'],['4×8','4×8','3×8'],['4×8','4×8','3×8']],
+  [['3×15','3×15','2×15'],['3×15','3×15','2×15'],['3×20','3×20','2×20'],['3×20','3×20','2×20']]
+];
+var DAYS=['월요일','수요일','금요일'];
+var PAGES=['calc','prog','stats','hist','prof'];
 
-const LEVELS = {
-  '스쿼트':    [{r:2.0,l:'엘리트'},{r:1.75,l:'상급'},{r:1.5,l:'중급'},{r:1.25,l:'초급'},{r:0,l:'입문'}],
-  '데드리프트':[{r:2.5,l:'엘리트'},{r:2.0,l:'상급'},{r:1.75,l:'중급'},{r:1.5,l:'초급'},{r:0,l:'입문'}],
-  '벤치프레스':[{r:1.5,l:'엘리트'},{r:1.25,l:'상급'},{r:1.0,l:'중급'},{r:0.75,l:'초급'},{r:0,l:'입문'}]
-};
-const LVC = {엘리트:'#e8ff00',상급:'#00d084',중급:'#ffaa00',초급:'#888',입문:'#555'};
+var exIdx=0,goalIdx=0,weekIdx=0,statIdx=0;
+var calY=new Date().getFullYear(),calM=new Date().getMonth(),calSel=null;
+var cRM=null,cBW=null,cBWM=null;
 
-const GOALS = {
-  strength: {label:'최대 근력',pctMin:0.85,pctMax:1.00,sets:'3~5세트',reps:'1~5회',rest:'3~5분'},
-  hyper:    {label:'근비대',   pctMin:0.70,pctMax:0.84,sets:'3~4세트',reps:'6~12회',rest:'60~90초'},
-  endurance:{label:'근지구력', pctMin:0.50,pctMax:0.69,sets:'2~3세트',reps:'15~20회',rest:'30~60초'}
-};
+function ls(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function ss(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 
-const WPCT = {
-  strength: [[.75,.80,.85],[.80,.85,.90],[.85,.90,.95],[.90,.95,1.00]],
-  hyper:    [[.65,.70,.75],[.70,.75,.78],[.72,.76,.80],[.75,.78,.82]],
-  endurance:[[.50,.55,.58],[.52,.57,.60],[.55,.58,.62],[.57,.60,.65]]
-};
-const WSETS = {
-  strength: [['5×3','5×3','3×3'],['4×3','4×3','3×2'],['4×2','4×2','2×2'],['3×2','3×1','1×1']],
-  hyper:    [['4×10','4×10','3×10'],['4×10','4×10','3×10'],['4×8','4×8','3×8'],['4×8','4×8','3×8']],
-  endurance:[['3×15','3×15','2×15'],['3×15','3×15','2×15'],['3×20','3×20','2×20'],['3×20','3×20','2×20']]
-};
-const DAYS = ['월요일','수요일','금요일'];
+var recs=ls('1rm3',[]);
+var bwRecs=ls('bw3',[]);
+var prof=ls('pf3',{name:'',sex:'남',age:'',ht:''});
 
-// ── 상태 ───────────────────────────────────────────
-let exercise='스쿼트', goal='strength', week=1, statEx='스쿼트';
-let calYear=new Date().getFullYear(), calMonth=new Date().getMonth(), calSelected=null;
-let rmChart=null, bwChart=null, bwMiniChart=null;
-
-function load(k,def){try{return JSON.parse(localStorage.getItem(k)||'null')||def;}catch(e){return def;}}
-function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
-
-let history=load('1rm_v2',[]);
-let bwHistory=load('bw_v2',[]);
-let profile=load('profile_v2',{name:'',sex:'남',age:'',height:''});
-
-// ── 계산기 ─────────────────────────────────────────
 function calc(){
-  const w=parseFloat(document.getElementById('weight').value)||0;
-  const r=parseInt(document.getElementById('reps').value)||1;
-  const bw=parseFloat(document.getElementById('bw').value)||75;
-  const ep=Math.round(w*(1+r/30));
-  const br=r===1?Math.round(w):Math.round(w*(36/(37-r)));
-  const oc=Math.round(w*(1+r*0.025));
-  const rm=Math.round((ep+br+oc)/3);
-  const ratio=(rm/bw).toFixed(2);
+  var w=parseFloat(document.getElementById('iw').value)||0;
+  var r=parseInt(document.getElementById('ir').value)||1;
+  var b=parseFloat(document.getElementById('ib').value)||75;
+  var ep=Math.round(w*(1+r/30));
+  var br=r===1?Math.round(w):Math.round(w*(36/(37-r)));
+  var oc=Math.round(w*(1+r*.025));
+  var rm=Math.round((ep+br+oc)/3);
+  var ratio=(rm/b).toFixed(2);
 
-  document.getElementById('ep-v').textContent=ep;
-  document.getElementById('br-v').textContent=br;
-  document.getElementById('oc-v').textContent=oc;
-  document.getElementById('rm-val').textContent=rm;
-  document.getElementById('ratio-val').textContent=ratio+'×';
+  document.getElementById('out-rm').textContent=rm;
+  document.getElementById('out-ep').textContent=ep;
+  document.getElementById('out-br').textContent=br;
+  document.getElementById('out-oc').textContent=oc;
+  document.getElementById('out-ratio').textContent=ratio+'×';
 
-  const levels=LEVELS[exercise];
-  let lv=levels[levels.length-1].l;
-  for(const item of levels){if(parseFloat(ratio)>=item.r){lv=item.l;break;}}
-  const lc=LVC[lv]||'#888';
-  document.getElementById('level-val').textContent=lv;
-  document.getElementById('level-val').style.color=lc;
+  var lvArr=LEVELS[exIdx],lv=lvArr[lvArr.length-1].l;
+  for(var i=0;i<lvArr.length;i++){if(parseFloat(ratio)>=lvArr[i].r){lv=lvArr[i].l;break;}}
+  var lvEl=document.getElementById('out-level');
+  lvEl.textContent=lv; lvEl.style.color=LVC[lv]||'#888';
 
-  // PR 감지
-  const exHist=history.filter(h=>h.exercise===exercise);
-  const prVal=exHist.length?Math.max(...exHist.map(h=>h.rm)):0;
-  const badge=document.getElementById('pr-badge');
-  badge.style.display=rm>prVal&&exHist.length>0?'inline':'none';
+  var exR=recs.filter(function(h){return h.ei===exIdx;});
+  var prV=exR.length?Math.max.apply(null,exR.map(function(h){return h.rm;})):0;
+  document.getElementById('pr-badge').style.display=(rm>prV&&exR.length>0)?'inline':'none';
 
-  // 이전 대비
-  const diffEl=document.getElementById('diff-val');
-  if(exHist.length>0){
-    const last=exHist[0].rm;
-    const diff=rm-last;
-    diffEl.textContent=(diff>=0?'+':'')+diff+' kg';
-    diffEl.style.color=diff>0?'#00d084':diff<0?'#ff4d4d':'#888';
-  } else {
-    diffEl.textContent='—';
-    diffEl.style.color='#555';
-  }
+  var diffEl=document.getElementById('out-diff');
+  if(exR.length>0){
+    var d=rm-exR[0].rm;
+    diffEl.textContent=(d>=0?'+':'')+d+' kg';
+    diffEl.style.color=d>0?'#00d084':d<0?'#ff4d4d':'#888';
+  }else{diffEl.textContent='—';diffEl.style.color='#555';}
 
-  // 존
-  const zones=[
-    {name:'최대 근력',min:.85,max:1.00,color:'#ff4d4d',pct:100},
-    {name:'근비대',   min:.70,max:.84, color:'#ffaa00',pct:84},
-    {name:'근지구력', min:.50,max:.69, color:'#00d084',pct:69}
+  var zones=[
+    {nm:'최대 근력',min:.85,max:1.00,c:'#ff4d4d',p:100},
+    {nm:'근비대',min:.70,max:.84,c:'#ffaa00',p:84},
+    {nm:'근지구력',min:.50,max:.69,c:'#00d084',p:69}
   ];
-  document.getElementById('zones').innerHTML=zones.map(z=>`
-    <div class="zone-row">
-      <div class="zone-dot" style="background:${z.color}"></div>
-      <div class="zone-nm">${z.name}</div>
-      <div class="zone-bg"><div class="zone-fill" style="width:${z.pct}%;background:${z.color}"></div></div>
-      <div class="zone-kg">${Math.round(rm*z.min)}–${Math.round(rm*z.max)} kg</div>
-    </div>`).join('');
+  document.getElementById('out-zones').innerHTML=zones.map(function(z){
+    return '<div class="zone-row"><div class="zone-dot" style="background:'+z.c+'"></div><div class="zone-nm">'+z.nm+'</div><div class="zone-bg"><div class="zone-fill" style="width:'+z.p+'%;background:'+z.c+'"></div></div><div class="zone-kg">'+Math.round(rm*z.min)+'–'+Math.round(rm*z.max)+' kg</div></div>';
+  }).join('');
 
-  document.getElementById('bio-title').textContent=exercise+' · 생체역학';
-  document.getElementById('bio-items').innerHTML=(BIOMECH[exercise]||[]).map(b=>`
-    <div class="bio-item"><div class="bio-tag">${b.tag}</div><div>${b.txt}</div></div>`).join('');
+  document.getElementById('out-bio-title').textContent=EX[exIdx]+' · 생체역학';
+  document.getElementById('out-bio').innerHTML=BIOMECH[exIdx].map(function(b){
+    return '<div class="bio-item"><div class="bio-tag">'+b.tag+'</div><div>'+b.txt+'</div></div>';
+  }).join('');
 
   renderProg();
 }
 
-function setEx(ex){
-  exercise=ex;
-  ['스쿼트','데드리프트','벤치프레스'].forEach(e=>{
-    document.getElementById('ex-'+e).classList.toggle('on',e===ex);
-  });
+function setEx(i){
+  exIdx=i;
+  for(var j=0;j<3;j++) document.getElementById('ex'+j).className='ex-btn'+(j===i?' on':'');
   calc();
 }
 
-// ── 프로그램 ───────────────────────────────────────
-function setGoal(g){
-  goal=g;
-  ['strength','hyper','endurance'].forEach(k=>{
-    document.getElementById('goal-'+k).classList.toggle('on',k===g);
-  });
+function getRm(){return parseInt(document.getElementById('out-rm').textContent)||100;}
+
+function setGoal(i){
+  goalIdx=i;
+  for(var j=0;j<3;j++) document.getElementById('g'+j).className='goal-btn'+(j===i?' on':'');
   renderProg();
 }
-
-function setWeek(w){
-  week=w;
-  [1,2,3,4].forEach(n=>{document.getElementById('w'+n).classList.toggle('on',n===w);});
+function setWeek(i){
+  weekIdx=i;
+  for(var j=0;j<4;j++) document.getElementById('wt'+j).className='wtab'+(j===i?' on':'');
   renderProg();
 }
-
 function renderProg(){
-  const g=GOALS[goal];
-  const rm=parseInt(document.getElementById('rm-val').textContent)||100;
-  document.getElementById('prog-info').innerHTML=`
-    <div style="display:flex;gap:14px;flex-wrap:wrap;">
-      <div><div style="font-size:10px;color:var(--t3);">목적</div><div style="font-size:13px;font-weight:600;margin-top:2px;">${g.label}</div></div>
-      <div><div style="font-size:10px;color:var(--t3);">세트 구성</div><div style="font-size:13px;font-weight:600;margin-top:2px;">${g.sets} / ${g.reps}</div></div>
-      <div><div style="font-size:10px;color:var(--t3);">세트 간 휴식</div><div style="font-size:13px;font-weight:600;margin-top:2px;">${g.rest}</div></div>
-    </div>`;
-
-  const pcts=WPCT[goal][week-1];
-  const sets=WSETS[goal][week-1];
-  document.getElementById('prog-grid').innerHTML=
-    DAYS.map((d,i)=>`<div class="day-card"><div class="day-nm">${d}</div>
-      <div class="day-kg">${Math.round(rm*pcts[i])}<span style="font-size:11px;font-weight:400;color:var(--t3)"> kg</span></div>
-      <div class="day-sets">${sets[i]}세트×반복</div>
-      <div class="day-pct">${Math.round(pcts[i]*100)}% 1RM</div></div>`).join('')+
-    `<div class="day-card" style="background:var(--s1);border:none;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-      <div style="font-size:20px;margin-bottom:4px;">🛌</div>
-      <div class="day-nm">휴식일</div>
-      <div style="font-size:11px;color:var(--t3);">화·목·토·일</div>
-    </div>`;
+  var g=GOALS[goalIdx],rm=getRm();
+  document.getElementById('prog-info').innerHTML='<div style="display:flex;gap:14px;flex-wrap:wrap;"><div><div style="font-size:10px;color:var(--t3)">목적</div><div style="font-size:13px;font-weight:600;margin-top:2px">'+g.label+'</div></div><div><div style="font-size:10px;color:var(--t3)">세트 구성</div><div style="font-size:13px;font-weight:600;margin-top:2px">'+g.sets+' / '+g.reps+'</div></div><div><div style="font-size:10px;color:var(--t3)">세트 간 휴식</div><div style="font-size:13px;font-weight:600;margin-top:2px">'+g.rest+'</div></div></div>';
+  var pcts=WPCT[goalIdx][weekIdx],sets=WSETS[goalIdx][weekIdx];
+  document.getElementById('prog-days').innerHTML=DAYS.map(function(d,i){
+    return '<div class="day-card"><div class="day-nm">'+d+'</div><div class="day-kg">'+Math.round(rm*pcts[i])+'<span style="font-size:11px;font-weight:400;color:var(--t3)"> kg</span></div><div class="day-sets">'+sets[i]+'</div><div class="day-pct">'+Math.round(pcts[i]*100)+'% 1RM</div></div>';
+  }).join('')+'<div class="day-card" style="background:var(--s1);border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;"><div style="font-size:20px;margin-bottom:4px">🛌</div><div class="day-nm">휴식일</div><div style="font-size:11px;color:var(--t3)">화·목·토·일</div></div>';
 }
 
-// ── 기록 저장 ──────────────────────────────────────
 function saveRec(){
-  const w=parseFloat(document.getElementById('weight').value)||0;
-  const r=parseInt(document.getElementById('reps').value)||1;
-  const rm=parseInt(document.getElementById('rm-val').textContent);
-  const ratio=document.getElementById('ratio-val').textContent;
-  const bw=parseFloat(document.getElementById('bw').value)||75;
-  const now=new Date();
-  const dateStr=now.toLocaleDateString('ko-KR');
-  const dateKey=now.toISOString().slice(0,10);
-  const rec={exercise,weight:w,reps:r,rm,ratio,bw,date:dateStr,dateKey};
-  history.unshift(rec);
-  if(history.length>200)history.pop();
-  save('1rm_v2',history);
-
-  // 체중도 자동 저장
-  const bwRec={bw,date:dateStr,dateKey};
-  const exists=bwHistory.find(b=>b.dateKey===dateKey);
-  if(!exists){bwHistory.unshift(bwRec);if(bwHistory.length>365)bwHistory.pop();save('bw_v2',bwHistory);}
-
-  const btn=event.currentTarget;
-  const orig=btn.textContent;
-  btn.textContent='✓ 저장 완료';
-  setTimeout(()=>btn.textContent=orig,1500);
+  var w=parseFloat(document.getElementById('iw').value)||0;
+  var r=parseInt(document.getElementById('ir').value)||1;
+  var b=parseFloat(document.getElementById('ib').value)||75;
+  var rm=getRm();
+  var ratio=document.getElementById('out-ratio').textContent;
+  var now=new Date();
+  var dk=now.toISOString().slice(0,10);
+  var ds=now.toLocaleDateString('ko-KR');
+  recs.unshift({ei:exIdx,w:w,r:r,rm:rm,ratio:ratio,bw:b,dk:dk,ds:ds});
+  if(recs.length>300)recs.pop();
+  ss('1rm3',recs);
+  if(!bwRecs.find(function(x){return x.dk===dk;})){
+    bwRecs.unshift({bw:b,dk:dk,ds:ds});
+    if(bwRecs.length>365)bwRecs.pop();
+    ss('bw3',bwRecs);
+  }
+  var btn=document.getElementById('save-btn');
+  var orig=btn.textContent; btn.textContent='✓ 저장 완료';
+  setTimeout(function(){btn.textContent=orig;},1500);
   calc();
 }
 
-// ── 공유 ────────────────────────────────────────────
 function doShare(){
-  const rm=document.getElementById('rm-val').textContent;
-  const ratio=document.getElementById('ratio-val').textContent;
-  const w=document.getElementById('weight').value;
-  const r=document.getElementById('reps').value;
-  const g=GOALS[goal];
-  const text=`[1RM 측정]\n운동: ${exercise}\n${w}kg×${r}회 → 1RM: ${rm}kg\n체중 대비: ${ratio}\n\n[${g.label} 처방]\n${Math.round(rm*g.pctMin)}–${Math.round(rm*g.pctMax)}kg / ${g.sets} / ${g.reps}`;
-  if(navigator.share)navigator.share({title:'1RM 결과',text});
-  else if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>{
-    const btn=event.currentTarget;const orig=btn.textContent;btn.textContent='✓ 복사됨';setTimeout(()=>btn.textContent=orig,1500);
-  });
+  var rm=getRm(),g=GOALS[goalIdx];
+  var ratio=document.getElementById('out-ratio').textContent;
+  var w=document.getElementById('iw').value,r=document.getElementById('ir').value;
+  var txt='[1RM 측정]\n운동: '+EX[exIdx]+'\n'+w+'kg×'+r+'회 → 1RM: '+rm+'kg\n체중 대비: '+ratio+'\n\n['+g.label+' 처방]\n'+Math.round(rm*g.pmin)+'–'+Math.round(rm*g.pmax)+'kg / '+g.sets+' / '+g.reps;
+  if(navigator.share){navigator.share({title:'1RM 결과',text:txt});}
+  else if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){alert('클립보드에 복사되었습니다.');});}
+  else{alert(txt);}
 }
 
-// ── 통계 탭 ────────────────────────────────────────
-function setStatEx(ex){
-  statEx=ex;
-  ['스쿼트','데드리프트','벤치프레스'].forEach(e=>{
-    document.getElementById('st-'+e).classList.toggle('on',e===ex);
-  });
+function setStatEx(i){
+  statIdx=i;
+  for(var j=0;j<3;j++) document.getElementById('st'+j).className='stat-tab'+(j===i?' on':'');
   renderStats();
 }
 
+function makeChart(id,labels,data,color,destroy){
+  if(destroy)destroy.destroy();
+  return new Chart(document.getElementById(id),{
+    type:'line',
+    data:{labels:labels,datasets:[{data:data,borderColor:color,backgroundColor:color.replace(')',',0.07)').replace('rgb','rgba'),borderWidth:2,pointBackgroundColor:color,pointRadius:3,tension:.3,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{
+      x:{ticks:{color:'#555',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.05)'}},
+      y:{ticks:{color:'#555',font:{size:9},callback:function(v){return v+'kg';}},grid:{color:'rgba(255,255,255,0.05)'}}
+    }}
+  });
+}
+
 function renderStats(){
-  const exHist=history.filter(h=>h.exercise===statEx).slice().reverse();
-  const prRec=exHist.length?exHist.reduce((a,b)=>a.rm>b.rm?a:b):null;
-  const lastRec=history.find(h=>h.exercise===statEx);
+  var exR=recs.filter(function(h){return h.ei===statIdx;}).slice().reverse();
+  var prR=exR.length?exR.reduce(function(a,b){return a.rm>b.rm?a:b;}):null;
+  var lastR=recs.find(function(h){return h.ei===statIdx;});
+  document.getElementById('st-pr').textContent=prR?prR.rm+' kg':'—';
+  document.getElementById('st-pr-d').textContent=prR?prR.ds:'기록 없음';
+  document.getElementById('st-last').textContent=lastR?lastR.rm+' kg':'—';
+  document.getElementById('st-last-d').textContent=lastR?lastR.ds:'기록 없음';
+  document.getElementById('st-cnt').textContent=exR.length;
+  var br=exR.length?Math.max.apply(null,exR.map(function(h){return parseFloat(h.ratio)||0;})).toFixed(2):null;
+  document.getElementById('st-ratio').textContent=br?br+'×':'—';
 
-  document.getElementById('st-pr').textContent=prRec?prRec.rm+' kg':'—';
-  document.getElementById('st-pr-date').textContent=prRec?prRec.date:'기록 없음';
-  document.getElementById('st-last').textContent=lastRec?lastRec.rm+' kg':'—';
-  document.getElementById('st-last-date').textContent=lastRec?lastRec.date:'기록 없음';
-  document.getElementById('st-cnt').textContent=exHist.length;
-  const bestRatio=exHist.length?Math.max(...exHist.map(h=>parseFloat(h.ratio)||0)).toFixed(2):'—';
-  document.getElementById('st-ratio').textContent=bestRatio==='—'?'—':bestRatio+'×';
+  var rmD=exR.slice(-14);
+  cRM=makeChart('c-rm',rmD.map(function(h){return h.dk.slice(5).replace('-','/');}),rmD.map(function(h){return h.rm;}),'#e8ff00',cRM);
 
-  // 1RM 차트
-  const labels=exHist.slice(-12).map(h=>h.date.replace(/\d{4}\. /,'').replace(/\.$','').replace('. ','/')  );
-  const rmData=exHist.slice(-12).map(h=>h.rm);
-  if(rmChart)rmChart.destroy();
-  const rmCtx=document.getElementById('rm-chart').getContext('2d');
-  rmChart=new Chart(rmCtx,{
-    type:'line',
-    data:{labels,datasets:[{label:'1RM',data:rmData,borderColor:'#e8ff00',backgroundColor:'rgba(232,255,0,0.08)',borderWidth:2,pointBackgroundColor:'#e8ff00',pointRadius:3,tension:0.3,fill:true}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{
-      x:{ticks:{color:'#555',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.05)'}},
-      y:{ticks:{color:'#555',font:{size:9},callback:v=>v+'kg'},grid:{color:'rgba(255,255,255,0.05)'}}
-    }}
-  });
+  var bwD=bwRecs.slice().reverse().slice(-14);
+  cBW=makeChart('c-bw',bwD.map(function(h){return h.dk.slice(5).replace('-','/');}),bwD.map(function(h){return h.bw;}),'#4d9fff',cBW);
 
-  // 체중 차트
-  const bwData=bwHistory.slice().reverse().slice(-12);
-  const bwLabels=bwData.map(b=>b.date.replace(/\d{4}\. /,'').replace(/\.$/,'').replace('. ','/'));
-  const bwVals=bwData.map(b=>b.bw);
-  if(bwChart)bwChart.destroy();
-  const bwCtx=document.getElementById('bw-chart').getContext('2d');
-  bwChart=new Chart(bwCtx,{
-    type:'line',
-    data:{labels:bwLabels,datasets:[{label:'체중',data:bwVals,borderColor:'#4d9fff',backgroundColor:'rgba(77,159,255,0.08)',borderWidth:2,pointBackgroundColor:'#4d9fff',pointRadius:3,tension:0.3,fill:true}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{
-      x:{ticks:{color:'#555',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.05)'}},
-      y:{ticks:{color:'#555',font:{size:9},callback:v=>v+'kg'},grid:{color:'rgba(255,255,255,0.05)'}}
-    }}
-  });
-
-  // PR 목록 (3종목)
-  const exList=['스쿼트','데드리프트','벤치프레스'];
-  document.getElementById('pr-list').innerHTML=exList.map(ex=>{
-    const recs=history.filter(h=>h.exercise===ex);
-    const pr=recs.length?Math.max(...recs.map(h=>h.rm)):null;
-    const prRec=pr?recs.find(h=>h.rm===pr):null;
-    return `<div class="pr-list-item">
-      <div><div style="font-size:13px;font-weight:600;">${ex}</div><div style="font-size:11px;color:var(--t3);">${prRec?prRec.date:'기록 없음'}</div></div>
-      <div style="font-size:17px;font-weight:800;color:var(--ac);">${pr?pr+' kg':'—'}</div>
-    </div>`;
+  document.getElementById('pr-list').innerHTML=EX.map(function(ex,i){
+    var r=recs.filter(function(h){return h.ei===i;});
+    var pr=r.length?Math.max.apply(null,r.map(function(h){return h.rm;})):null;
+    var prd=pr?r.find(function(h){return h.rm===pr;}):null;
+    return '<div class="pr-list-item"><div><div style="font-size:13px;font-weight:600">'+ex+'</div><div style="font-size:11px;color:var(--t3)">'+(prd?prd.ds:'기록 없음')+'</div></div><div style="font-size:17px;font-weight:800;color:var(--ac)">'+(pr?pr+' kg':'—')+'</div></div>';
   }).join('');
 }
 
-// ── 달력/기록 탭 ────────────────────────────────────
 function renderCal(){
-  const now=new Date();
-  const y=calYear,m=calMonth;
-  document.getElementById('cal-month-title').textContent=`${y}년 ${m+1}월`;
-  const firstDay=new Date(y,m,1).getDay();
-  const lastDate=new Date(y,m+1,0).getDate();
-  const today=now.toISOString().slice(0,10);
-
-  const dateDots=new Set(history.map(h=>h.dateKey));
-
-  let html=['일','월','화','수','목','금','토'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
-  for(let i=0;i<firstDay;i++)html+=`<div class="cal-day empty"></div>`;
-  for(let d=1;d<=lastDate;d++){
-    const key=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday=key===today;
-    const isSel=key===calSelected;
-    const hasData=dateDots.has(key);
-    let cls='cal-day'+(hasData?' has-data':'')+(isToday?' today':'')+(isSel?' selected':'');
-    html+=`<div class="${cls}" onclick="selectDay('${key}')">${d}</div>`;
+  var today=new Date().toISOString().slice(0,10);
+  var y=calY,m=calM;
+  document.getElementById('mon-title').textContent=y+'년 '+(m+1)+'월';
+  var first=new Date(y,m,1).getDay();
+  var last=new Date(y,m+1,0).getDate();
+  var dots={};
+  recs.forEach(function(h){dots[h.dk]=true;});
+  var html=['일','월','화','수','목','금','토'].map(function(d){return '<div class="cal-dow">'+d+'</div>';}).join('');
+  for(var i=0;i<first;i++) html+='<div class="cal-day empty"></div>';
+  for(var d=1;d<=last;d++){
+    var k=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var cls='cal-day';
+    if(dots[k]) cls+=' has';
+    if(k===today) cls+=' today';
+    if(k===calSel) cls+=' sel';
+    html+='<div class="'+cls+'" onclick="selDay(\''+k+'\')">'+d+'</div>';
   }
-  document.getElementById('cal-grid').innerHTML=html;
-
-  if(calSelected){
-    const recs=history.filter(h=>h.dateKey===calSelected);
-    document.getElementById('cal-selected-label').textContent=calSelected.replace(/-/g,'.')+(recs.length?` · ${recs.length}건`:'');
-    renderHistList(recs);
-  } else {
-    const allRecs=history.slice(0,30);
-    document.getElementById('cal-selected-label').textContent='최근 기록';
-    renderHistList(allRecs);
-  }
+  document.getElementById('cal').innerHTML=html;
+  var filtered=calSel?recs.filter(function(h){return h.dk===calSel;}):recs.slice(0,30);
+  document.getElementById('hist-label').textContent=calSel?calSel.replace(/-/g,'.')+' · '+filtered.length+'건':'최근 기록';
+  renderHistItems(filtered);
 }
 
-function selectDay(key){
-  calSelected=calSelected===key?null:key;
-  renderCal();
+function selDay(k){calSel=calSel===k?null:k;renderCal();}
+function moveMon(d){
+  calM+=d;
+  if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;}
+  calSel=null; renderCal();
 }
 
-function changeMonth(dir){
-  calMonth+=dir;
-  if(calMonth<0){calMonth=11;calYear--;}
-  if(calMonth>11){calMonth=0;calYear++;}
-  calSelected=null;
-  renderCal();
+function renderHistItems(list){
+  var el=document.getElementById('hist-items');
+  if(!list.length){el.innerHTML='<div style="text-align:center;color:var(--t3);font-size:13px;padding:2rem 0">기록이 없습니다.</div>';return;}
+  var prs=EX.map(function(_,i){var r=recs.filter(function(h){return h.ei===i;});return r.length?Math.max.apply(null,r.map(function(h){return h.rm;})):0;});
+  el.innerHTML=list.map(function(h){
+    var isPR=h.rm>=prs[h.ei]&&recs.filter(function(x){return x.ei===h.ei;}).length>1;
+    return '<div class="hist-item"><div class="hist-top"><span class="hist-ex">'+EX[h.ei]+(isPR?' 🏆':'')+'</span><span class="hist-rm">'+h.rm+' kg</span></div><div class="hist-bot"><span class="hist-det">'+h.w+'kg×'+h.r+'회 · '+h.ratio+' · 체중 '+h.bw+'kg</span><span class="hist-date">'+h.ds+'</span></div></div>';
+  }).join('');
 }
 
-function renderHistList(recs){
-  const el=document.getElementById('hist-list');
-  if(!recs.length){el.innerHTML='<div style="text-align:center;color:var(--t3);font-size:13px;padding:2rem 0;">기록이 없습니다.</div>';return;}
-
-  const exPR={};
-  ['스쿼트','데드리프트','벤치프레스'].forEach(ex=>{
-    const r=history.filter(h=>h.exercise===ex);
-    exPR[ex]=r.length?Math.max(...r.map(h=>h.rm)):0;
-  });
-
-  el.innerHTML=recs.map(h=>`
-    <div class="hist-item">
-      <div class="hist-top">
-        <div><span class="hist-ex">${h.exercise}</span>${h.rm>=exPR[h.exercise]&&history.filter(hh=>hh.exercise===h.exercise).length>1?'<span class="pr-dot"></span>':''}</div>
-        <span class="hist-rm">${h.rm} kg</span>
-      </div>
-      <div class="hist-bot">
-        <span class="hist-det">${h.weight}kg×${h.reps}회 · ${h.ratio||''} · 체중${h.bw||'—'}kg</span>
-        <span class="hist-date">${h.date}</span>
-      </div>
-    </div>`).join('');
-}
-
-// ── 프로필 탭 ──────────────────────────────────────
 function setSex(s){
-  profile.sex=s;
-  document.getElementById('p-male').classList.toggle('on',s==='남');
-  document.getElementById('p-female').classList.toggle('on',s==='여');
+  prof.sex=s;
+  document.getElementById('sex-m').className='seg-btn'+(s==='남'?' on':'');
+  document.getElementById('sex-f').className='seg-btn'+(s==='여'?' on':'');
 }
-
-function saveProfile(){
-  profile.name=document.getElementById('p-name').value;
-  profile.age=document.getElementById('p-age').value;
-  profile.height=document.getElementById('p-height').value;
-  save('profile_v2',profile);
+function loadProf(){
+  document.getElementById('pf-name').value=prof.name||'';
+  document.getElementById('pf-age').value=prof.age||'';
+  document.getElementById('pf-ht').value=prof.ht||'';
+  setSex(prof.sex||'남');
   updateGreeting();
-  const btn=event.currentTarget;const orig=btn.textContent;btn.textContent='✓ 저장됨';setTimeout(()=>btn.textContent=orig,1500);
 }
-
+function saveProf(){
+  prof.name=document.getElementById('pf-name').value;
+  prof.age=document.getElementById('pf-age').value;
+  prof.ht=document.getElementById('pf-ht').value;
+  ss('pf3',prof); updateGreeting();
+  var b=event.currentTarget; var o=b.textContent; b.textContent='✓ 저장됨';
+  setTimeout(function(){b.textContent=o;},1500);
+}
 function updateGreeting(){
-  const g=document.getElementById('profile-greeting');
-  if(profile.name) g.textContent=`${profile.name}님 · 운동역학 기반 1RM 추정`;
-  else g.textContent='운동역학 기반 최대 근력 추정 · 훈련 처방';
+  document.getElementById('greeting').textContent=prof.name?prof.name+'님 · 운동역학 기반 1RM 추정':'운동역학 기반 최대 근력 추정 · 훈련 처방';
 }
-
-function loadProfile(){
-  document.getElementById('p-name').value=profile.name||'';
-  document.getElementById('p-age').value=profile.age||'';
-  document.getElementById('p-height').value=profile.height||'';
-  setSex(profile.sex||'남');
-  if(profile.bw)document.getElementById('bw').value=profile.bw;
-  updateGreeting();
-}
-
 function saveBW(){
-  const bw=parseFloat(document.getElementById('bw-input').value);
-  if(!bw)return;
-  const now=new Date();
-  const dateStr=now.toLocaleDateString('ko-KR');
-  const dateKey=now.toISOString().slice(0,10);
-  const exists=bwHistory.findIndex(b=>b.dateKey===dateKey);
-  if(exists>=0)bwHistory[exists]={bw,date:dateStr,dateKey};
-  else{bwHistory.unshift({bw,date:dateStr,dateKey});if(bwHistory.length>365)bwHistory.pop();}
-  save('bw_v2',bwHistory);
-  document.getElementById('bw').value=bw;
-  renderBWMiniChart();
-  const btn=event.currentTarget;const orig=btn.textContent;btn.textContent='✓';setTimeout(()=>btn.textContent=orig,1200);
+  var bw=parseFloat(document.getElementById('pf-bw').value);
+  if(!bw||bw<30||bw>300){alert('올바른 체중을 입력하세요.');return;}
+  var now=new Date(); var dk=now.toISOString().slice(0,10); var ds=now.toLocaleDateString('ko-KR');
+  var idx=-1;
+  for(var i=0;i<bwRecs.length;i++){if(bwRecs[i].dk===dk){idx=i;break;}}
+  if(idx>=0) bwRecs[idx]={bw:bw,dk:dk,ds:ds};
+  else{bwRecs.unshift({bw:bw,dk:dk,ds:ds});if(bwRecs.length>365)bwRecs.pop();}
+  ss('bw3',bwRecs);
+  document.getElementById('ib').value=bw;
+  renderBWMini();
+  var b=event.currentTarget; var o=b.textContent; b.textContent='✓';
+  setTimeout(function(){b.textContent=o;},1200);
+}
+function renderBWMini(){
+  var d=bwRecs.slice().reverse().slice(-14);
+  if(!d.length) return;
+  cBWM=makeChart('c-bwm',d.map(function(h){return h.dk.slice(5).replace('-','/');}),d.map(function(h){return h.bw;}),'#4d9fff',cBWM);
 }
 
-function renderBWMiniChart(){
-  const data=bwHistory.slice().reverse().slice(-14);
-  if(!data.length)return;
-  if(bwMiniChart)bwMiniChart.destroy();
-  const ctx=document.getElementById('bw-mini-chart').getContext('2d');
-  bwMiniChart=new Chart(ctx,{
-    type:'line',
-    data:{
-      labels:data.map(b=>b.date.replace(/\d{4}\. /,'').replace(/\.$/,'').replace('. ','/')),
-      datasets:[{data:data.map(b=>b.bw),borderColor:'#4d9fff',backgroundColor:'rgba(77,159,255,0.08)',borderWidth:2,pointRadius:2,tension:0.3,fill:true}]
-    },
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{
-      x:{ticks:{color:'#555',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.05)'}},
-      y:{ticks:{color:'#555',font:{size:9},callback:v=>v+'kg'},grid:{color:'rgba(255,255,255,0.05)'}}
-    }}
-  });
-}
-
-// ── 내보내기 ────────────────────────────────────────
 function exportCSV(){
-  const rows=[['날짜','운동','중량(kg)','반복','1RM(kg)','체중대비','체중(kg)']];
-  history.forEach(h=>rows.push([h.date,h.exercise,h.weight,h.reps,h.rm,h.ratio||'',h.bw||'']));
-  const csv=rows.map(r=>r.join(',')).join('\n');
-  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='1rm_records.csv';a.click();
+  var csv='\uFEFF날짜,운동,중량(kg),반복,1RM(kg),체중대비,체중(kg)\n';
+  recs.forEach(function(h){csv+=h.ds+','+EX[h.ei]+','+h.w+','+h.r+','+h.rm+','+(h.ratio||'')+','+(h.bw||'')+'\n';});
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='1rm_records.csv'; a.click();
 }
-
 function clearAll(){
-  if(!confirm('모든 기록을 삭제할까요?\n이 작업은 되돌릴 수 없습니다.'))return;
-  history=[];bwHistory=[];
-  save('1rm_v2',[]);save('bw_v2',[]);
-  renderCal();
+  if(!confirm('모든 기록을 삭제할까요?\n되돌릴 수 없습니다.'))return;
+  recs=[]; bwRecs=[];
+  ss('1rm3',[]); ss('bw3',[]);
+  renderCal(); alert('초기화 완료');
 }
 
-// ── 탭 전환 ─────────────────────────────────────────
-function switchTab(t){
-  ['calc','program','stats','history','profile'].forEach(id=>{
-    document.getElementById('tab-'+id).style.display=(id===t)?'':'none';
+function go(id){
+  PAGES.forEach(function(p,i){
+    document.getElementById('page-'+p).className='scroll page'+(p===id?' on':'');
+    document.querySelectorAll('.tab')[i].className='tab'+(p===id?' on':'');
   });
-  document.querySelectorAll('.tab').forEach((el,i)=>{
-    el.classList.toggle('on',['calc','program','stats','history','profile'][i]===t);
-  });
-  if(t==='history')renderCal();
-  if(t==='program')renderProg();
-  if(t==='stats')renderStats();
-  if(t==='profile'){loadProfile();renderBWMiniChart();}
+  if(id==='hist') renderCal();
+  if(id==='prog') renderProg();
+  if(id==='stats') renderStats();
+  if(id==='prof'){loadProf(); setTimeout(renderBWMini,100);}
 }
 
-// ── 초기화 ───────────────────────────────────────────
+loadProf();
 calc();
-updateGreeting();
-
-if('serviceWorker' in navigator){
-  const sw=`const C='v2';self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>new Response('')))));`;
-  const blob=new Blob([sw],{type:'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
-}
 </script>
 </body>
 </html>
